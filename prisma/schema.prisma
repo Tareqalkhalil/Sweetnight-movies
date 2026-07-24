@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== USERS ==========
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  name          String?
+  avatar        String?
+  password      String
+  role          UserRole  @default(USER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  watchlist     WatchlistItem[]
+  favorites     Favorite[]
+  reviews       Review[]
+  ratings       Rating[]
+  watchHistory  WatchHistory[]
+  sessions      Session[]
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ========== CATEGORIES ==========
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  nameAr      String    // Arabic name
+  slug        String    @unique
+  description String?
+  icon        String    // emoji or icon name
+  color       String    // hex color
+  type        ContentType
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  movies      MovieCategory[]
+  series      SeriesCategory[]
+}
+
+enum ContentType {
+  MOVIE
+  SERIES
+  BOTH
+}
+
+// ========== MOVIES ==========
+model Movie {
+  id            String    @id @default(cuid())
+  title         String
+  titleAr       String?   // Arabic title
+  slug          String    @unique
+  description   String
+  descriptionAr String?
+  poster        String?   // image URL
+  backdrop      String?   // backdrop image URL
+  trailer       String?   // trailer URL
+  embedUrl      String?   // VidLink embed URL
+  duration      Int       // in minutes
+  releaseYear   Int
+  rating        Float     @default(0) // IMDB rating
+  ageRating     String?   // PG-13, R, etc.
+  language      String    @default("en")
+  quality       String    @default("HD") // 4K, HD, SD
+  views         Int       @default(0)
+  isFeatured    Boolean   @default(false)
+  isTrending    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  categories    MovieCategory[]
+  cast          MovieCast[]
+  directors     MovieDirector[]
+  reviews       Review[]
+  ratings       Rating[]
+  watchlist     WatchlistItem[]
+  favorites     Favorite[]
+  watchHistory  WatchHistory[]
+  episodes      Episode[] // for series that are movies with episodes
+}
+
+model MovieCategory {
+  id         String   @id @default(cuid())
+  movieId    String
+  categoryId String
+
+  movie      Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, categoryId])
+}
+
+// ========== SERIES ==========
+model Series {
+  id            String    @id @default(cuid())
+  title         String
+  titleAr       String?
+  slug          String    @unique
+  description   String
+  descriptionAr String?
+  poster        String?
+  backdrop      String?
+  trailer       String?
+  embedUrl      String?   // VidLink embed URL
+  totalSeasons  Int       @default(1)
+  totalEpisodes Int       @default(0)
+  releaseYear   Int
+  endYear       Int?
+  rating        Float     @default(0)
+  ageRating     String?
+  language      String    @default("en")
+  quality       String    @default("HD")
+  views         Int       @default(0)
+  isFeatured    Boolean   @default(false)
+  isTrending    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  categories    SeriesCategory[]
+  seasons       Season[]
+  cast          SeriesCast[]
+  directors     SeriesDirector[]
+  reviews       Review[]
+  ratings       Rating[]
+  watchlist     WatchlistItem[]
+  favorites     Favorite[]
+  watchHistory  WatchHistory[]
+}
+
+model SeriesCategory {
+  id         String   @id @default(cuid())
+  seriesId   String
+  categoryId String
+
+  series     Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([seriesId, categoryId])
+}
+
+// ========== SEASONS & EPISODES ==========
+model Season {
+  id          String    @id @default(cuid())
+  seriesId    String
+  seasonNumber Int
+  title       String?
+  description String?
+  poster      String?
+  releaseDate DateTime?
+  episodeCount Int      @default(0)
+  createdAt   DateTime  @default(now())
+
+  series      Series    @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  episodes    Episode[]
+}
+
+model Episode {
+  id            String    @id @default(cuid())
+  seasonId      String
+  movieId       String?   // optional link to movie
+  episodeNumber Int
+  title         String
+  description   String?
+  duration      Int       // in minutes
+  videoUrl      String?
+  thumbnail     String?
+  views         Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  season        Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  movie         Movie?    @relation(fields: [movieId], references: [id])
+  watchHistory  WatchHistory[]
+}
+
+// ========== CAST & CREW ==========
+model Person {
+  id          String    @id @default(cuid())
+  name        String
+  nameAr      String?
+  slug        String    @unique
+  bio         String?
+  bioAr       String?
+  photo       String?
+  birthDate   DateTime?
+  nationality String?
+  createdAt   DateTime  @default(now())
+
+  movieCast   MovieCast[]
+  seriesCast  SeriesCast[]
+  movieDir    MovieDirector[]
+  seriesDir   SeriesDirector[]
+}
+
+model MovieCast {
+  id       String @id @default(cuid())
+  movieId  String
+  personId String
+  role     String // character name
+  order    Int    @default(0)
+
+  movie    Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model SeriesCast {
+  id       String @id @default(cuid())
+  seriesId String
+  personId String
+  role     String
+  order    Int    @default(0)
+
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model MovieDirector {
+  id       String @id @default(cuid())
+  movieId  String
+  personId String
+
+  movie    Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model SeriesDirector {
+  id       String @id @default(cuid())
+  seriesId String
+  personId String
+
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+// ========== USER INTERACTIONS ==========
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String?
+  seriesId  String?
+  addedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series    Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, seriesId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String?
+  seriesId  String?
+  addedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series    Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, seriesId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String?
+  seriesId  String?
+  rating    Int      // 1-10
+  content   String
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series    Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String?
+  seriesId  String?
+  score     Int      // 1-10
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series    Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, seriesId])
+}
+
+model WatchHistory {
+  id          String    @id @default(cuid())
+  userId      String
+  movieId     String?
+  seriesId    String?
+  episodeId   String?
+  progress    Int       @default(0) // seconds watched
+  completed   Boolean   @default(false)
+  watchedAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie       Movie?    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series      Series?   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  episode     Episode?  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+}
+
+// ========== BANNER/SLIDES ==========
+model Banner {
+  id          String    @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?
+  image       String
+  movieId     String?
+  seriesId    String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+// ========== SETTINGS ==========
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Coding Assistant - مجاني</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #1e1e2e; color: #cdd6f4; }
+        h1 { color: #89b4fa; text-align: center; }
+        textarea { width: 100%; height: 120px; background: #313244; color: #cdd6f4; border: 1px solid #585b70; border-radius: 8px; padding: 10px; font-family: monospace; resize: vertical; }
+        button { background: #89b4fa; color: #1e1e2e; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px 5px; }
+        button:hover { background: #b4befe; }
+        #output { background: #313244; border-radius: 8px; padding: 15px; min-height: 200px; white-space: pre-wrap; font-family: monospace; border: 1px solid #585b70; margin-top: 15px; }
+        .loading { color: #f9e2af; }
+        .error { color: #f38ba8; }
+        select { background: #313244; color: #cdd6f4; border: 1px solid #585b70; padding: 8px; border-radius: 6px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 مساعد البرمجة AI - مجاني عبر Puter.js</h1>
+    
+    <label>📝 اكتب طلبك بالعربية أو الإنجليزية:</label>
+    <textarea id="prompt" placeholder="مثال: اكتب دالة Python لترتيب قائمة باستخدام Quick Sort...">اكتب دالة JavaScript لعكس نص</textarea>
+    
+    <div>
+        <label>🎯 اختر النموذج:</label>
+        <select id="model">
+            <option value="gpt-5.4-nano">GPT-5.4 Nano (سريع)</option>
+            <option value="gpt-5.5" selected>GPT-5.5 (أفضل جودة)</option>
+            <option value="openai/gpt-5.3-codex">Codex (متخصص في الكود)</option>
+            <option value="openai/gpt-oss-120b">GPT-OSS (مفتوح المصدر)</option>
+        </select>
+        
+        <label>🌡️ Temperature:</label>
+        <select id="temp">
+            <option value="0.2">0.2 - دقيق</option>
+            <option value="0.5" selected>0.5 - متوازن</option>
+            <option value="0.8">0.8 - إبداعي</option>
+        </select>
+    </div>
+    
+    <div>
+        <button onclick="generateCode()">⚡ توليد الكود</button>
+        <button onclick="explainCode()">📖 شرح الكود</button>
+        <button onclick="debugCode()">🐛 تصحيح الأخطاء</button>
+        <button onclick="generateImage()">🎨 توليد صورة</button>
+    </div>
+    
+    <div id="output">النتيجة ستظهر هنا...</div>
+
+    <!-- Puter.js CDN -->
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+        const output = document.getElementById('output');
+        const prompt = document.getElementById('prompt');
+        const model = document.getElementById('model');
+        const temp = document.getElementById('temp');
+
+        function setLoading(msg) {
+            output.innerHTML = `<span class="loading">⏳ ${msg}...</span>`;
+        }
+
+        function showError(err) {
+            output.innerHTML = `<span class="error">❌ خطأ: ${err.message || err}</span>`;
+        }
+
+        // توليد كود جديد
+        async function generateCode() {
+            setLoading('جاري توليد الكود');
+            try {
+                const response = await puter.ai.chat(
+                    `اكتب كود برمجي للطلب التالي مع شرح مبسط:\n\n${prompt.value}`,
+                    { 
+                        model: model.value,
+                        temperature: parseFloat(temp.value),
+                        max_tokens: 2000
+                    }
+                );
+                output.textContent = response;
+            } catch (err) { showError(err); }
+        }
+
+        // شرح كود موجود
+        async function explainCode() {
+            setLoading('جاري الشرح');
+            try {
+                const response = await puter.ai.chat(
+                    `اشرح هذا الكود بالتفصيل باللغة العربية:\n\n${prompt.value}`,
+                    { model: model.value, temperature: 0.3 }
+                );
+                output.textContent = response;
+            } catch (err) { showError(err); }
+        }
+
+        // تصحيح أخطاء
+        async function debugCode() {
+            setLoading('جاري البحث عن الأخطاء');
+            try {
+                const response = await puter.ai.chat(
+                    `ابحث عن الأخطاء في هذا الكود واقترح التصحيحات:\n\n${prompt.value}`,
+                    { model: model.value, temperature: 0.2 }
+                );
+                output.textContent = response;
+            } catch (err) { showError(err); }
+        }
+
+        // توليد صورة
+        async function generateImage() {
+            setLoading('جاري توليد الصورة');
+            try {
+                const img = await puter.ai.txt2img(prompt.value, { model: "gpt-image-2" });
+                output.innerHTML = '';
+                output.appendChild(img);
+            } catch (err) { showError(err); }
+        }
+    </script>
+</body>
+</html>

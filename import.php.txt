@@ -1,0 +1,666 @@
+<?php
+/**
+ * Top Cinema Content Importer
+ * ضع هذا الملف في موقعك مثلاً: /import.php
+ */
+
+// إعدادات الاتصال بقاعدة البيانات
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'your_database');
+define('DB_USER', 'your_username');
+define('DB_PASS', 'your_password');
+define('DB_PREFIX', 'wp_'); // تغيير حسب الجدول
+
+// روابط الأقسام
+$categories = [
+    // الأفلام
+    'movies_all' => 'https://topcinemaa.top/movies/',
+    'movies_foreign' => 'https://topcinemaa.top/movies/?category=افلام-اجنبي',
+    'movies_asian' => 'https://topcinemaa.top/movies/?category=افلام-اسيوي',
+    'movies_anime' => 'https://topcinemaa.top/movies/?category=افلام-انمي',
+    'movies_upcoming' => 'https://topcinemaa.top/movies/?category=افلام-تعرض-قريبا',
+    
+    // المسلسلات
+    'series_all' => 'https://topcinemaa.top/series/',
+    'series_foreign' => 'https://topcinemaa.top/series/?category=مسلسلات-اجنبي',
+    'series_asian' => 'https://topcinemaa.top/series/?category=مسلسلات-اسيوية',
+    'series_anime' => 'https://topcinemaa.top/series/?category=مسلسلات-انمي',
+    
+    // الأنمي
+    'anime_all' => 'https://topcinemaa.top/anime/',
+];
+
+// أنواع الأفلام
+$genres = [
+    'action' => 'اكشن',
+    'thriller' => 'اثارة',
+    'drama' => 'دراما',
+    'horror' => 'رعب',
+    'romance' => 'رومانسي',
+    'comedy' => 'كوميدي',
+    'scifi' => 'خيال-علمي',
+    'fantasy' => 'فانتازيا',
+    'crime' => 'جريمة',
+    'war' => 'حربي',
+    'adventure' => 'مغامرة',
+    'family' => 'عائلي',
+    'mystery' => 'غموض',
+    'cartoon' => 'كرتون',
+    'music' => 'موسيقي',
+    'documentary' => 'وثائقي',
+    'western' => 'ويسترن',
+    'sport' => 'رياضي',
+    'biography' => 'سيرة-ذاتية',
+    'short' => 'قصير',
+    'game_show' => 'game-show',
+    'reality_tv' => 'reality-tv',
+    'talk_show' => 'talk-show',
+];
+
+// الجودات
+$qualities = [
+    '1080p_bluray' => '1080p-bluray',
+    '1080p_webdl' => '1080p-web-dl',
+    '1080p_webrip' => '1080p-webrip',
+    '1080p_hdcam' => '1080p-hdcam',
+    '1080p_hdts' => '1080p-hdts',
+    '1080p_hdtc' => '1080p-hdtc',
+    '1080p_hdrip' => '1080p-hdrip',
+    '1080p_web' => '1080p-web',
+    '1080p_webscr' => '1080p-webscr',
+    '1080p_hc_webdl' => '1080p-hc-web-dl',
+    '720p_bluray' => '720p-bluray',
+    '720p_webdl' => '720p-web-dl',
+    '720p_webrip' => '720p-webrip',
+    '720p_hdcam' => '720p-hdcam',
+    '720p_hdts' => '720p-hdts',
+    '720p_hdtc' => '720p-hdtc',
+    '720p_hdtv' => '720p-hdtv',
+    '720p_web' => '720p-web',
+    '720p_webscr' => '720p-webscr',
+    '720p_hd' => '720p-hd',
+    '720p_hc_webdl' => '720p-hc-web-dl',
+    '480p_bluray' => '480p-bluray',
+    '480p_webdl' => '480p-web-dl',
+    'hdts' => 'hdts',
+    'web' => 'web',
+];
+
+// السنوات (1966-2026)
+$years = range(1966, 2026);
+
+// الدول الرئيسية
+$countries = [
+    'usa' => 'الولايات-المتحدة-الامريكية',
+    'uk' => 'المملكة-المتحدة',
+    'france' => 'فرنسا',
+    'germany' => 'ألمانيا',
+    'italy' => 'إيطاليا',
+    'spain' => 'إسبانيا',
+    'canada' => 'كندا',
+    'brazil' => 'البرازيل',
+    'mexico' => 'المكسيك',
+    'argentina' => 'الأرجنتين',
+    'australia' => 'أستراليا',
+    'india' => 'الهند',
+    'china' => 'الصين',
+    'japan' => 'اليابان',
+    'korea' => 'كوريا-الجنوبية',
+    'turkey' => 'تركيا',
+    'russia' => 'روسيا',
+    'ukraine' => 'أوكرانيا',
+    'poland' => 'بولندا',
+    'romania' => 'رومانيا',
+    'bulgaria' => 'بلغاريا',
+    'serbia' => 'جمهورية-صربيا',
+    'croatia' => 'كرواتيا',
+    'slovenia' => 'سلوفينيا',
+    'slovakia' => 'سلوفاكيا',
+    'czech' => 'الجمهورية-التشيكية',
+    'hungary' => 'المجر',
+    'sweden' => 'السويد',
+    'norway' => 'النرويج',
+    'denmark' => 'الدانمارك',
+    'finland' => 'فنلندا',
+    'iceland' => 'آيسلندا',
+    'netherlands' => 'هولندا',
+    'belgium' => 'بلجيكا',
+    'switzerland' => 'سويسرا',
+    'austria' => 'النمسا',
+    'ireland' => 'جمهورية-أيرلندا',
+    'greece' => 'اليونان',
+    'israel' => 'إسرائيل',
+    'lebanon' => 'لبنان',
+    'uae' => 'الإمارات-العربية-المتحده',
+    'bahrain' => 'البحرين',
+    'morocco' => 'المغرب',
+    'pakistan' => 'باكستان',
+    'thailand' => 'تايلاند',
+    'taiwan' => 'تايوان',
+    'vietnam' => 'فيتنام',
+    'philippines' => 'الفلبين',
+    'malaysia' => 'ماليزيا',
+    'indonesia' => 'أندونيسيا',
+    'new_zealand' => 'نيوزيلندا',
+    'south_africa' => 'جنوب-أفريقيا',
+    'venezuela' => 'فنزويلا',
+    'colombia' => 'كولومبيا',
+    'peru' => 'بيرو',
+    'chile' => 'تشيلي',
+    'ecuador' => 'إكوادور',
+    'paraguay' => 'باراغواي',
+    'uzbekistan' => 'أوزبكستان',
+    'armenia' => 'أرمينيا',
+    'estonia' => 'استونيا',
+    'lithuania' => 'لتوانيا',
+    'luxembourg' => 'لوكسمبورغ',
+    'malta' => 'مالطا',
+    'hong_kong' => 'هونغ-كونغ',
+    'georgia' => 'جيورجيا',
+    'iran' => 'إيران',
+];
+
+// اللغات الرئيسية
+$languages = [
+    'arabic' => 'العربية',
+    'english' => 'الأنجليزية',
+    'french' => 'الفرنسية',
+    'german' => 'الألمانية',
+    'spanish' => 'الإسبانية',
+    'italian' => 'الإيطالية',
+    'turkish' => 'التركية',
+    'hindi' => 'الهندية',
+    'korean' => 'الكورية',
+    'japanese' => 'اليابانية',
+    'chinese' => 'الصينية',
+    'persian' => 'الفارسية',
+    'russian' => 'الروسية',
+    'portuguese' => 'البرتغالية',
+    'polish' => 'البولندية',
+    'thai' => 'التايلاندية',
+    'czech' => 'التشيكية',
+    'danish' => 'الدنماركية',
+    'romanian' => 'الرومانية',
+    'swedish' => 'السويدية',
+    'serbian' => 'الصربية',
+    'hebrew' => 'العبرية',
+    'filipino' => 'الفلبينية',
+    'vietnamese' => 'الفيتنامية',
+    'cantonese' => 'الكانتونية',
+    'croatian' => 'الكرواتية',
+    'latin' => 'اللاتينية',
+    'hungarian' => 'المجرية',
+    'norwegian' => 'النرويجية',
+    'dutch' => 'الهولندية',
+    'welsh' => 'الويلزية',
+    'greek' => 'اليونانية',
+    'ukrainian' => 'الأوكرانية',
+    'indonesian' => 'الإندونيسية',
+    'icelandic' => 'الإيسلندية',
+    'bulgarian' => 'البلغارية',
+    'zulu' => 'الزولو',
+    'slovak' => 'السلوفاكية',
+    'finnish' => 'الفنلندية',
+    'malawian' => 'الملاوية',
+    'estonian' => 'الأستونية',
+    'eng' => 'eng',
+    'jpn' => 'jpn',
+    'kor' => 'kor',
+    'fra' => 'fra',
+    'spa' => 'spa',
+    'zho' => 'zho',
+];
+
+/**
+ * بناء رابط مع فلاتر
+ */
+function buildUrl($base, $filters = []) {
+    $params = [];
+    
+    if (!empty($filters['genre'])) {
+        $params[] = 'genre=' . urlencode($filters['genre']);
+    }
+    if (!empty($filters['quality'])) {
+        $params[] = 'quality=' . urlencode($filters['quality']);
+    }
+    if (!empty($filters['year'])) {
+        $params[] = 'year=' . intval($filters['year']);
+    }
+    if (!empty($filters['country'])) {
+        $params[] = 'country=' . urlencode($filters['country']);
+    }
+    if (!empty($filters['language'])) {
+        $params[] = 'language=' . urlencode($filters['language']);
+    }
+    
+    if (!empty($params)) {
+        return $base . '?' . implode('&', $params);
+    }
+    
+    return $base;
+}
+
+/**
+ * جلب محتوى الصفحة
+ */
+function fetchPage($url) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    
+    $html = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200 || empty($html)) {
+        return false;
+    }
+    
+    return $html;
+}
+
+/**
+ * استخراج الأفلام/المسلسلات من HTML
+ */
+function parseContent($html) {
+    $items = [];
+    
+    // البحث عن العناصر باستخدام regex
+    // نمط العنوان والرابط
+    preg_match_all('/<a[^>]*href=["\']([^"\']*\/(?:movie|series|anime)\/[^"\']*)["\'][^>]*>.*?<h3[^>]*>(.*?)<\/h3>/si', $html, $matches, PREG_SET_ORDER);
+    
+    foreach ($matches as $match) {
+        $items[] = [
+            'url' => $match[1],
+            'title' => strip_tags($match[2]),
+        ];
+    }
+    
+    // استخراج الصورة
+    preg_match_all('/<img[^>]*src=["\']([^"\']*)["\'][^>]*alt=["\']([^"\']*)["\'][^>]*>/si', $html, $imgMatches, PREG_SET_ORDER);
+    
+    // استخراج التقييم
+    preg_match_all('/(\d+\.\d+)<\/span>/', $html, $ratingMatches);
+    
+    // استخراج الجودة
+    preg_match_all('/(1080p|720p|480p)[\s\-]*(BluRay|WEB-DL|WEBRip|HDCAM|HDTS|HDTV|WEB|HDRip|HDTC|WEBSCR)/i', $html, $qualityMatches);
+    
+    // استخراج النوع
+    preg_match_all('/>(اكشن|دراما|رعب|رومانسي|كوميدي|اثارة|جريمة|خيال علمي|فانتازيا|مغامرة|حربي|تاريخي|عائلي|غموض|كرتون|موسيقي|وثائقي|ويسترن|رياضي|سيرة ذاتية|قصير|game-show|reality-tv|talk-show|music)</i', $html, $genreMatches);
+    
+    return [
+        'items' => $items,
+        'images' => $imgMatches,
+        'ratings' => $ratingMatches[1] ?? [],
+        'qualities' => $qualityMatches[0] ?? [],
+        'genres' => $genreMatches[1] ?? [],
+    ];
+}
+
+/**
+ * الحصول على رابط الصفحة التالية
+ */
+function getNextPageUrl($html, $currentUrl) {
+    // البحث عن رابط "التالي" أو "Next"
+    if (preg_match('/<a[^>]*href=["\']([^"\']*(?:page\/\d+|page=\d+|paged=\d+)[^"\']*)["\'][^>]*>(?:التالي|Next|›|»)/i', $html, $match)) {
+        return $match[1];
+    }
+    
+    // إذا كان الرابط يحتوي على ?page=
+    if (preg_match('/page=(\d+)/', $currentUrl, $match)) {
+        $nextPage = intval($match[1]) + 1;
+        return preg_replace('/page=\d+/', 'page=' . $nextPage, $currentUrl);
+    }
+    
+    return false;
+}
+
+/**
+ * استيراد المحتوى
+ */
+function importContent($urls, $maxPages = 1) {
+    $allItems = [];
+    
+    foreach ($urls as $name => $url) {
+        echo "جاري استيراد: $name\n";
+        
+        $currentUrl = $url;
+        $pageCount = 0;
+        
+        while ($currentUrl && $pageCount < $maxPages) {
+            $html = fetchPage($currentUrl);
+            
+            if (!$html) {
+                echo "فشل في جلب: $currentUrl\n";
+                break;
+            }
+            
+            $data = parseContent($html);
+            $allItems[$name] = array_merge($allItems[$name] ?? [], $data['items']);
+            
+            echo "تم استخراج " . count($data['items']) . " عنصر من الصفحة\n";
+            
+            $currentUrl = getNextPageUrl($html, $currentUrl);
+            $pageCount++;
+            
+            // تأخير لتجنب الحظر
+            sleep(2);
+        }
+    }
+    
+    return $allItems;
+}
+
+/**
+ * حفظ في قاعدة البيانات (WordPress مثال)
+ */
+function saveToDatabase($items, $postType = 'post') {
+    global $wpdb;
+    
+    foreach ($items as $category => $categoryItems) {
+        foreach ($categoryItems as $item) {
+            // التحقق من عدم التكرار
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_title = %s AND post_type = %s",
+                $item['title'],
+                $postType
+            ));
+            
+            if ($existing) {
+                echo "تخطي (موجود مسبقاً): {$item['title']}\n";
+                continue;
+            }
+            
+            // إنشاء المنشور
+            $postData = [
+                'post_title'   => $item['title'],
+                'post_content' => '',
+                'post_status'  => 'publish',
+                'post_type'    => $postType,
+                'post_author'  => 1,
+            ];
+            
+            $postId = wp_insert_post($postData);
+            
+            if ($postId) {
+                // إضافة حقول مخصصة
+                update_post_meta($postId, 'source_url', $item['url']);
+                update_post_meta($postId, 'import_category', $category);
+                
+                echo "تم استيراد: {$item['title']}\n";
+            }
+        }
+    }
+}
+
+// ==================== واجهة المستخدم ====================
+
+// عرض النموذج
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    ?>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>أداة استيراد Top Cinema</title>
+        <style>
+            * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+            body { background: #1a1a2e; color: #eee; padding: 20px; }
+            .container { max-width: 1200px; margin: 0 auto; }
+            h1 { color: #e94560; text-align: center; }
+            .form-group { margin: 15px 0; background: #16213e; padding: 20px; border-radius: 10px; }
+            label { display: block; margin-bottom: 8px; color: #0f3460; font-weight: bold; }
+            select, input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #0f3460; background: #1a1a2e; color: #fff; }
+            .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+            .checkbox-item { display: flex; align-items: center; gap: 8px; }
+            .checkbox-item input { width: auto; }
+            button { background: #e94560; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 8px; cursor: pointer; display: block; margin: 20px auto; }
+            button:hover { background: #c13651; }
+            .section-title { color: #e94560; border-bottom: 2px solid #e94560; padding-bottom: 10px; margin-top: 30px; }
+            .info { background: #0f3460; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+            .info code { background: #1a1a2e; padding: 2px 6px; border-radius: 4px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎬 أداة استيراد محتوى Top Cinema</h1>
+            
+            <div class="info">
+                <strong>ملاحظات مهمة:</strong>
+                <ul>
+                    <li>يمكنك تحديد أكثر من قسم ونوع وجودة وسنة</li>
+                    <li>سيتم دمج الفلاتر تلقائياً في روابط الاستيراد</li>
+                    <li>أقصى عدد صفحات لكل قسم: <code>5</code> (يمكن تعديله في الكود)</li>
+                </ul>
+            </div>
+            
+            <form method="POST" action="">
+                <!-- الأقسام الرئيسية -->
+                <div class="form-group">
+                    <h3 class="section-title">📁 الأقسام الرئيسية</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="movies_all" id="movies_all" checked>
+                            <label for="movies_all">🎬 الأفلام (الكل)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="movies_foreign" id="movies_foreign">
+                            <label for="movies_foreign">🎬 أفلام أجنبي</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="movies_asian" id="movies_asian">
+                            <label for="movies_asian">🎬 أفلام أسيوي</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="movies_anime" id="movies_anime">
+                            <label for="movies_anime">🎬 أفلام أنمي</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="movies_upcoming" id="movies_upcoming">
+                            <label for="movies_upcoming">🎬 أفلام تعرض قريباً</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="series_all" id="series_all">
+                            <label for="series_all">📺 المسلسلات (الكل)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="series_foreign" id="series_foreign">
+                            <label for="series_foreign">📺 مسلسلات أجنبي</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="series_asian" id="series_asian">
+                            <label for="series_asian">📺 مسلسلات أسيوية</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="series_anime" id="series_anime">
+                            <label for="series_anime">📺 مسلسلات أنمي</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="sections[]" value="anime_all" id="anime_all">
+                            <label for="anime_all">🎌 الأنمي (الكل)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- الأنواع -->
+                <div class="form-group">
+                    <h3 class="section-title">🎭 الأنواع (اختياري)</h3>
+                    <div class="checkbox-group">
+                        <?php foreach ($genres as $key => $value): ?>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="genres[]" value="<?php echo $value; ?>" id="genre_<?php echo $key; ?>">
+                            <label for="genre_<?php echo $key; ?>"><?php echo str_replace('-', ' ', $value); ?></label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
+                <!-- الجودة -->
+                <div class="form-group">
+                    <h3 class="section-title">📹 الجودة (اختياري)</h3>
+                    <div class="checkbox-group">
+                        <?php foreach ($qualities as $key => $value): ?>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="qualities[]" value="<?php echo $value; ?>" id="quality_<?php echo $key; ?>">
+                            <label for="quality_<?php echo $key; ?>"><?php echo strtoupper(str_replace('-', ' ', $value)); ?></label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
+                <!-- السنة -->
+                <div class="form-group">
+                    <h3 class="section-title">📅 سنة الإصدار (اختياري)</h3>
+                    <select name="year">
+                        <option value="">الكل</option>
+                        <?php foreach (array_reverse($years) as $year): ?>
+                        <option value="<?php echo $year; ?>"><?php echo $year; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <!-- الدولة -->
+                <div class="form-group">
+                    <h3 class="section-title">🌍 الدولة (اختياري)</h3>
+                    <select name="country">
+                        <option value="">الكل</option>
+                        <?php foreach ($countries as $key => $value): ?>
+                        <option value="<?php echo $value; ?>"><?php echo str_replace('-', ' ', $value); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <!-- اللغة -->
+                <div class="form-group">
+                    <h3 class="section-title">🗣️ اللغة (اختياري)</h3>
+                    <select name="language">
+                        <option value="">الكل</option>
+                        <?php foreach ($languages as $key => $value): ?>
+                        <option value="<?php echo $value; ?>"><?php echo str_replace('-', ' ', $value); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <!-- عدد الصفحات -->
+                <div class="form-group">
+                    <h3 class="section-title">📄 عدد الصفحات للاستيراد</h3>
+                    <select name="max_pages">
+                        <option value="1">1 صفحة</option>
+                        <option value="2">2 صفحات</option>
+                        <option value="3">3 صفحات</option>
+                        <option value="5" selected>5 صفحات</option>
+                        <option value="10">10 صفحات</option>
+                    </select>
+                </div>
+                
+                <button type="submit">🚀 بدء الاستيراد</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+// معالجة النموذج
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: text/plain; charset=utf-8');
+    
+    $selectedSections = $_POST['sections'] ?? [];
+    $selectedGenres = $_POST['genres'] ?? [];
+    $selectedQualities = $_POST['qualities'] ?? [];
+    $selectedYear = $_POST['year'] ?? '';
+    $selectedCountry = $_POST['country'] ?? '';
+    $selectedLanguage = $_POST['language'] ?? '';
+    $maxPages = intval($_POST['max_pages'] ?? 5);
+    
+    if (empty($selectedSections)) {
+        die("❌ الرجاء اختيار قسم واحد على الأقل!");
+    }
+    
+    // بناء قائمة الروابط
+    $urlsToImport = [];
+    
+    foreach ($selectedSections as $section) {
+        $baseUrl = $categories[$section] ?? '';
+        if (empty($baseUrl)) continue;
+        
+        // إذا لم يتم اختيار فلاتر إضافية
+        if (empty($selectedGenres) && empty($selectedQualities) && empty($selectedYear) && empty($selectedCountry) && empty($selectedLanguage)) {
+            $urlsToImport[$section] = $baseUrl;
+        } else {
+            // توليد كل التركيبات الممكنة
+            $combinations = [[]];
+            
+            if (!empty($selectedGenres)) {
+                $newCombinations = [];
+                foreach ($combinations as $comb) {
+                    foreach ($selectedGenres as $genre) {
+                        $newCombinations[] = array_merge($comb, ['genre' => $genre]);
+                    }
+                }
+                $combinations = $newCombinations;
+            }
+            
+            if (!empty($selectedQualities)) {
+                $newCombinations = [];
+                foreach ($combinations as $comb) {
+                    foreach ($selectedQualities as $quality) {
+                        $newCombinations[] = array_merge($comb, ['quality' => $quality]);
+                    }
+                }
+                $combinations = $newCombinations;
+            }
+            
+            if (!empty($selectedYear)) {
+                foreach ($combinations as &$comb) {
+                    $comb['year'] = $selectedYear;
+                }
+            }
+            
+            if (!empty($selectedCountry)) {
+                foreach ($combinations as &$comb) {
+                    $comb['country'] = $selectedCountry;
+                }
+            }
+            
+            if (!empty($selectedLanguage)) {
+                foreach ($combinations as &$comb) {
+                    $comb['language'] = $selectedLanguage;
+                }
+            }
+            
+            foreach ($combinations as $comb) {
+                $urlKey = $section . '_' . md5(serialize($comb));
+                $urlsToImport[$urlKey] = buildUrl($baseUrl, $comb);
+            }
+        }
+    }
+    
+    echo "📋 الروابط التي سيتم استيرادها:\n";
+    echo str_repeat("=", 80) . "\n";
+    foreach ($urlsToImport as $key => $url) {
+        echo "[$key] => $url\n";
+    }
+    echo str_repeat("=", 80) . "\n\n";
+    
+    // بدء الاستيراد
+    echo "⏳ جاري الاستيراد...\n\n";
+    
+    $results = importContent($urlsToImport, $maxPages);
+    
+    echo "\n✅ تم الانتهاء!\n";
+    echo "📊 الإحصائيات:\n";
+    foreach ($results as $key => $items) {
+        echo "  - $key: " . count($items) . " عنصر\n";
+    }
+    
+    // حفظ النتائج في ملف JSON للمراجعة
+    $jsonFile = 'import_results_' . date('Y-m-d_H-i-s') . '.json';
+    file_put_contents($jsonFile, json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    echo "\n💾 تم حفظ النتائج في: $jsonFile\n";
+}
