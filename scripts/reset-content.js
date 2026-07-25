@@ -1,13 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 
 async function main() {
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: 'file:./prisma/dev.db',
-      },
-    },
-  });
+  const prisma = new PrismaClient();
 
   try {
     await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF');

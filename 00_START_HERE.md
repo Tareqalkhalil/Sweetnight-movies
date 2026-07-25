@@ -146,7 +146,7 @@ node scripts/test-batch-import.js
 
 ```
 Frontend:        Backend:         Database:
-  • React          • Next.js         • SQLite
+  • React          • Next.js         • PostgreSQL (Supabase)
   • TypeScript      • Node.js         • Prisma
   • Tailwind CSS    • API Routes
   • Lucide Icons

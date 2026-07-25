@@ -289,7 +289,7 @@ node scripts/test-batch-import.js
 الحالة: ✅ جاهز للإنتاج
 آخر تحديث: 2026-07-10
 اللغة: TypeScript/React
-القاعدة: Prisma + SQLite
+القاعدة: Prisma + PostgreSQL (Supabase)
 ```
 
 ---

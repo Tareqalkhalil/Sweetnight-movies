@@ -205,7 +205,7 @@ Frontend:
 Backend:
   • Next.js API Routes
   • Prisma ORM
-  • SQLite Database
+  • PostgreSQL Database (Supabase support)
   • Node.js
 
 Storage:
